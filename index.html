@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>mariam's love maze</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      text-align: center;
+      font-family: Arial, sans-serif;
+      background-image: url('bg.png');
+      background-size: cover;
+      background-position: center;
+      color: #30343F;
+      margin: 0;
+      padding: 0;
+    }
+    #mazeContainer {
+  position: relative; /* Important! */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#player, #goal {
+  width: 120px; /* Adjust size as you want */
+  height: auto; /* Keeps original aspect ratio */
+}
+
+    #mazeCanvas {
+      border: 4px solid #c8173c;
+      background: transparent;
+    }
+    #Message-Container, #Letter-Container {
+      visibility: hidden;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(27,32,33,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #message {
+      background-image: url('yay.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      width: 1000px; /* Increased size */
+      height: 1000px; /* Increased size */
+    }
+    #letter {
+      background-image: url('letter.png');
+      background-size: cover; /* fullscreen */
+      background-repeat: no-repeat;
+      background-position: center;
+      width: 100%;
+      height: 100%;
+    }
+    #startScreen {
+      margin-top: 0;
+      height: 100vh;
+      background-image: url('title.png');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Start Screen -->
+  <div id="startScreen"></div>
+
+  <!-- Maze Canvas -->
+  <div id="mazeContainer">
+    <canvas id="mazeCanvas" height="500" width="500" style="display: none;"></canvas>
+    
+    <!-- Add these two images -->
+    <img id="player" src="mariam.png" style="position:absolute; display:none;">
+    <img id="goal" src="sameer.png" style="position:absolute; display:none;">
+  </div>
+  
+
+  <!-- Victory Message -->
+  <div id="Message-Container">
+    <div id="message"></div>
+  </div>
+
+  <!-- Love Letter -->
+  <div id="Letter-Container">
+    <div id="letter"></div>
+  </div>
+
+  <script>
+    var mazeCanvas = document.getElementById("mazeCanvas");
+    var ctx = mazeCanvas.getContext("2d");
+    var cellSize, maze, draw, player, moves;
+    var playerImg = new Image();
+    var goalImg = new Image();
+    playerImg.src = 'mariam.png';
+    goalImg.src = 'sameer.png';
+
+    window.addEventListener('keydown', function(e) {
+      if (e.code === 'Space' && document.getElementById("startScreen").style.display !== "none") {
+        startGame();
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        if (document.getElementById("Message-Container").style.visibility === "visible") {
+          openLetter();
+        }
+      }
+      if (e.key === 'b' || e.key === 'B') {
+        if (document.getElementById("Letter-Container").style.visibility === "visible") {
+          goToHome();
+        }
+      }
+    });
+
+    function startGame() {
+      document.getElementById("startScreen").style.display = "none";
+      mazeCanvas.style.display = "block";
+      makeMaze();
+    }
+
+    function restartGame() {
+      document.getElementById("Letter-Container").style.visibility = "hidden";
+      makeMaze();
+    }
+
+    function openLetter() {
+      document.getElementById("Message-Container").style.visibility = "hidden";
+      document.getElementById("Letter-Container").style.visibility = "visible";
+    }
+
+    function goToHome() {
+  window.location.reload(); // Reloads the entire page
+}
+
+
+    function displayVictoryMess(moves) {
+      document.getElementById("Message-Container").style.visibility = "visible";  
+    }
+
+    function Maze(size) {
+      this.map = [];
+      for (var i = 0; i < size; i++) {
+        this.map[i] = [];
+        for (var j = 0; j < size; j++) {
+          this.map[i][j] = {n: false, s: false, e: false, w: false, visited: false, priorPos: null};
+        }
+      }
+      var dirs = ["n","s","e","w"];
+      var modDir = {n:{y:-1,x:0,o:"s"}, s:{y:1,x:0,o:"n"}, e:{y:0,x:1,o:"w"}, w:{y:0,x:-1,o:"e"}};
+      var cellsVisited = 1;
+      var numCells = size * size;
+      var pos = {x:0,y:0};
+      while (cellsVisited < numCells) {
+        this.map[pos.x][pos.y].visited = true;
+        shuffle(dirs);
+        var moved = false;
+        for (var d of dirs) {
+          var nx = pos.x + modDir[d].x;
+          var ny = pos.y + modDir[d].y;
+          if (nx >= 0 && nx < size && ny >= 0 && ny < size && !this.map[nx][ny].visited) {
+            this.map[pos.x][pos.y][d] = true;
+            this.map[nx][ny][modDir[d].o] = true;
+            this.map[nx][ny].priorPos = pos;
+            pos = {x:nx,y:ny};
+            cellsVisited++;
+            moved = true;
+            break;
+          }
+        }
+        if (!moved) pos = this.map[pos.x][pos.y].priorPos;
+      }
+      this.startCoord = {x:0,y:0};
+      this.endCoord = {x:size-1,y:size-1};
+    }
+
+    function shuffle(a) {
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+    }
+
+    // function DrawMaze(m, ctx, cs) {
+    //   ctx.clearRect(0,0,500,500);
+    //   ctx.strokeStyle = "#c8173c";
+    //   ctx.lineWidth = 2;
+    //   ctx.beginPath();
+    //   for (var x=0; x<m.map.length; x++) {
+    //     for (var y=0; y<m.map[x].length; y++) {
+    //       var cell = m.map[x][y];
+    //       if(!cell.n){ctx.moveTo(x*cs,y*cs);ctx.lineTo((x+1)*cs,y*cs);}
+    //       if(!cell.s){ctx.moveTo(x*cs,(y+1)*cs);ctx.lineTo((x+1)*cs,(y+1)*cs);}
+    //       if(!cell.e){ctx.moveTo((x+1)*cs,y*cs);ctx.lineTo((x+1)*cs,(y+1)*cs);}
+    //       if(!cell.w){ctx.moveTo(x*cs,y*cs);ctx.lineTo(x*cs,(y+1)*cs);}
+    //     }
+    //   }
+    //   ctx.stroke();
+    //   ctx.drawImage(goalImg, m.endCoord.x*cs, m.endCoord.y*cs, cs, cs);
+    // }
+
+    function DrawMaze(m, ctx, cs) {
+  ctx.clearRect(0,0,500,500);
+  ctx.strokeStyle = "#c8173c";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (var x=0; x<m.map.length; x++) {
+    for (var y=0; y<m.map[x].length; y++) {
+      var cell = m.map[x][y];
+      if(!cell.n){ctx.moveTo(x*cs,y*cs);ctx.lineTo((x+1)*cs,y*cs);}
+      if(!cell.s){ctx.moveTo(x*cs,(y+1)*cs);ctx.lineTo((x+1)*cs,(y+1)*cs);}
+      if(!cell.e){ctx.moveTo((x+1)*cs,y*cs);ctx.lineTo((x+1)*cs,(y+1)*cs);}
+      if(!cell.w){ctx.moveTo(x*cs,y*cs);ctx.lineTo(x*cs,(y+1)*cs);}
+    }
+  }
+  ctx.stroke();
+
+  // Position goal image
+  let goalImg = document.getElementById("goal");
+  goalImg.style.display = "block";
+  goalImg.style.top = (mazeCanvas.offsetTop + m.endCoord.y*cs + (cs - goalImg.offsetHeight)/2) + "px";
+  goalImg.style.left = (mazeCanvas.offsetLeft + m.endCoord.x*cs + (cs - goalImg.offsetWidth)/2) + "px";
+}
+
+
+
+    // function Player(m,ctx,cs,onComplete) {
+    //   var pos={x:m.startCoord.x,y:m.startCoord.y};
+    //   moves=0;
+    //   drawPlayer();
+    //   window.onkeydown=function(e){
+    //     var cell=m.map[pos.x][pos.y];
+    //     var oldPos={...pos};
+    //     if(e.key=="ArrowUp"&&cell.n)pos.y--;
+    //     if(e.key=="ArrowDown"&&cell.s)pos.y++;
+    //     if(e.key=="ArrowLeft"&&cell.w)pos.x--;
+    //     if(e.key=="ArrowRight"&&cell.e)pos.x++;
+    //     if(pos.x!=oldPos.x||pos.y!=oldPos.y){moves++;drawPlayer();}
+    //     if(pos.x==m.endCoord.x&&pos.y==m.endCoord.y)onComplete(moves);
+    //   };
+    //   function drawPlayer(){
+    //     ctx.clearRect(0,0,500,500);DrawMaze(m,ctx,cs);
+    //     ctx.drawImage(playerImg, pos.x*cs, pos.y*cs, cs, cs);
+    //   }
+    // }
+
+    function Player(m, ctx, cs, onComplete) {
+  var pos = {x:m.startCoord.x, y:m.startCoord.y};
+  moves = 0;
+  drawPlayer();
+  window.onkeydown = function(e){
+    var cell = m.map[pos.x][pos.y];
+    var oldPos = {...pos};
+    if(e.key=="ArrowUp" && cell.n) pos.y--;
+    if(e.key=="ArrowDown" && cell.s) pos.y++;
+    if(e.key=="ArrowLeft" && cell.w) pos.x--;
+    if(e.key=="ArrowRight" && cell.e) pos.x++;
+    if(pos.x!=oldPos.x || pos.y!=oldPos.y){moves++; drawPlayer();}
+    if(pos.x==m.endCoord.x && pos.y==m.endCoord.y) onComplete(moves);
+  };
+
+  function drawPlayer(){
+    ctx.clearRect(0,0,500,500); DrawMaze(m,ctx,cs);
+    
+    // Position player image
+    let playerImg = document.getElementById("player");
+    playerImg.style.display = "block";
+    playerImg.style.top = (mazeCanvas.offsetTop + pos.y*cs + (cs - playerImg.offsetHeight)/2) + "px";
+    playerImg.style.left = (mazeCanvas.offsetLeft + pos.x*cs + (cs - playerImg.offsetWidth)/2) + "px";
+  }
+}
+
+
+    function makeMaze() {
+      cellSize = 500 / 10;
+      maze = new Maze(10);
+      draw = new DrawMaze(maze, ctx, cellSize);
+      player = new Player(maze, ctx, cellSize, displayVictoryMess);
+    }
+  </script>
+</body>
+</html>
